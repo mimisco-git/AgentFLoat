@@ -22,9 +22,15 @@ from agents.specialists import build_specialist
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 app.config["SECRET_KEY"] = "agentfloat-arc-2026"
 
-# Allow both Vercel frontend and local dev
-CORS(app, origins=["https://agent-f-loat.vercel.app", "http://localhost:3000", "http://localhost:8000", "*"])
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+# Allow Vercel frontend, Railway, and local dev
+CORS(app, resources={r"/*": {"origins": "*"}})
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="threading",
+    logger=False,
+    engineio_logger=False,
+)
 
 AGENTS        = {}
 TREASURY_POOL = TreasuryPool()
