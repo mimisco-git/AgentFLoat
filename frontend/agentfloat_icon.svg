@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="-70 -70 140 140">
+  <!-- AgentFloat — Icon Mark Only -->
+  <rect x="-70" y="-70" width="140" height="140" rx="28" fill="#0A1628"/>
+  <polygon points="0,-54 47,-27 47,27 0,54 -47,27 -47,-27"
+           fill="none" stroke="#00C27C" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="0"   cy="-30" r="5" fill="#00C27C"/>
+  <circle cx="26"  cy="15"  r="5" fill="#00C27C"/>
+  <circle cx="-26" cy="15"  r="5" fill="#00C27C"/>
+  <line x1="0"   y1="-30" x2="26"  y2="15"  stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.65"/>
+  <line x1="0"   y1="-30" x2="-26" y2="15"  stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.65"/>
+  <line x1="26"  y1="15"  x2="-26" y2="15"  stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.65"/>
+  <line x1="0" y1="15" x2="0" y2="-18" stroke="#00C27C" stroke-width="3" stroke-linecap="round"/>
+  <polyline points="-7,-11 0,-21 7,-11" fill="none" stroke="#00C27C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

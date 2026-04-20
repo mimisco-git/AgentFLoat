@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="240" viewBox="0 0 280 240">
+  <!-- AgentFloat — Stacked lockup (centered, for profile pics, etc.) -->
+  <g transform="translate(140, 90)">
+    <polygon points="0,-64 55,-32 55,32 0,64 -55,32 -55,-32"
+             fill="none" stroke="#00C27C" stroke-width="3.5" stroke-linejoin="round"/>
+    <polygon points="0,-44 38,-22 38,22 0,44 -38,22 -38,-22"
+             fill="#0A1628"/>
+    <circle cx="0"   cy="-24" r="5" fill="#00C27C"/>
+    <circle cx="21"  cy="12"  r="5" fill="#00C27C"/>
+    <circle cx="-21" cy="12"  r="5" fill="#00C27C"/>
+    <line x1="0"   y1="-24" x2="21"  y2="12"  stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.65"/>
+    <line x1="0"   y1="-24" x2="-21" y2="12"  stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.65"/>
+    <line x1="21"  y1="12"  x2="-21" y2="12"  stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.65"/>
+    <line x1="0" y1="12" x2="0" y2="-16" stroke="#00C27C" stroke-width="3" stroke-linecap="round"/>
+    <polyline points="-7,-10 0,-19 7,-10" fill="none" stroke="#00C27C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="140" y="180"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="36" font-weight="800" letter-spacing="-1"
+        fill="#0A1628" text-anchor="middle">Agent<tspan fill="#00C27C">Float</tspan></text>
+  <text x="140" y="206"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="400" letter-spacing="2.5"
+        fill="#94A3B8" text-anchor="middle">THE AGENT ECONOMY</text>
+</svg>

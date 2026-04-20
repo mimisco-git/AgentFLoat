@@ -4,9 +4,10 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AgentFloat — The Agent Economy That Pays for Itself</title>
+<link rel="icon" href="/agentfloat_icon.svg" type="image/svg+xml"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -26,13 +27,26 @@
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--body);overflow:hidden}
 #netCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
-.shell{position:relative;z-index:1;display:grid;grid-template-rows:58px 1fr;grid-template-columns:252px 1fr 300px;height:100vh}
+.shell{position:relative;z-index:1;display:grid;grid-template-rows:62px 1fr;grid-template-columns:252px 1fr 300px;height:100vh}
+
 /* HEADER */
-header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;background:rgba(255,255,255,0.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);box-shadow:0 1px 0 rgba(10,22,40,.06)}
-.logo{font-family:var(--disp);font-size:18px;font-weight:800;letter-spacing:-.02em;color:var(--navy)}
-.logo em{color:var(--green);font-style:normal}
-.mode-badge{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:var(--green-l);color:var(--green-d);border:1px solid rgba(0,194,124,.3)}
-.pdot{width:8px;height:8px;border-radius:50%;background:var(--text3);transition:background .3s}
+header{
+  grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 20px;
+  background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 1px 0 rgba(10,22,40,.05);
+}
+
+/* SVG Logo in header */
+.header-logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.header-logo svg{height:36px;width:auto}
+
+.mode-badge{
+  font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;padding:3px 10px;border-radius:20px;
+  background:var(--green-l);color:var(--green-d);border:1px solid rgba(0,194,124,.3);
+}
+.pdot{width:8px;height:8px;border-radius:50%;background:var(--text3);transition:background .3s;flex-shrink:0}
 .pdot.live{background:var(--green);animation:pring 1.8s ease infinite}
 @keyframes pring{0%{box-shadow:0 0 0 0 rgba(0,194,124,.5)}70%{box-shadow:0 0 0 6px rgba(0,194,124,0)}100%{box-shadow:0 0 0 0 rgba(0,194,124,0)}}
 .hstats{margin-left:auto;display:flex;align-items:center;gap:24px}
@@ -40,6 +54,7 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
 .hst .hl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:var(--mono)}
 .hst .hv{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--navy)}
 .hst .hv.g{color:var(--green-d)}.hst .hv.a{color:var(--amber)}
+
 /* SIDEBAR L */
 .sdl{background:rgba(255,255,255,.82);backdrop-filter:blur(16px);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 .phd{padding:12px 16px 10px;font-family:var(--mono);font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);border-bottom:1px solid var(--border)}
@@ -62,6 +77,7 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
 .wr{display:flex;justify-content:space-between;margin-bottom:4px}
 .wk{font-size:10px;color:rgba(255,255,255,.45)}.wv{font-family:var(--mono);font-size:10px;font-weight:600}
 .wv.r{color:#f87171}.wv.g{color:var(--green)}
+
 /* MAIN */
 .main{display:flex;flex-direction:column;overflow:hidden;background:transparent}
 .twrap{padding:14px 18px;background:rgba(255,255,255,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
@@ -91,9 +107,13 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
 .msub{font-size:9px;color:var(--text3)}
 .rarea{flex:1;overflow-y:auto;padding:20px 18px}
 .emp{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
-.eico{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--green-l),var(--blue-l));display:flex;align-items:center;justify-content:center;font-size:24px}
+
+/* Empty state logo */
+.emp-logo{margin-bottom:4px}
+.emp-logo svg{width:72px;height:72px;opacity:.18}
+
 .etit{font-family:var(--disp);font-size:15px;font-weight:700;color:var(--navy)}
-.esub{font-size:12px;color:var(--text3);max-width:260px;line-height:1.6}
+.esub{font-size:12px;color:var(--text3);max-width:280px;line-height:1.6}
 .pwrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
 .pchip{font-family:var(--mono);font-size:9px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .3s}
 .pchip.done{background:var(--green-l);color:var(--green-d);border-color:rgba(0,194,124,.4)}
@@ -104,6 +124,7 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
 .rbody{font-size:13px;line-height:1.8;color:var(--text2);white-space:pre-wrap;background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px;box-shadow:var(--shadow)}
 .mnote{display:none;margin-top:14px;padding:14px 16px;background:var(--amber-l);border:1px solid rgba(245,158,11,.3);border-left:3px solid var(--amber);border-radius:8px;font-size:11px;line-height:1.7;color:var(--text2)}
 .mnote.vis{display:block}.mnote strong{color:var(--amber)}
+
 /* SIDEBAR R */
 .sdr{background:rgba(255,255,255,.82);backdrop-filter:blur(16px);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 .txf{flex:1;overflow-y:auto}
@@ -132,11 +153,51 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
 </head>
 <body>
 <canvas id="netCanvas"></canvas>
+
+<!-- Inline SVG icon for favicon -->
+<svg xmlns="http://www.w3.org/2000/svg" id="agentfloat_icon" style="display:none" viewBox="-70 -70 140 140">
+  <rect x="-70" y="-70" width="140" height="140" rx="28" fill="#0A1628"/>
+  <polygon points="0,-54 47,-27 47,27 0,54 -47,27 -47,-27" fill="none" stroke="#00C27C" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="0" cy="-30" r="5" fill="#00C27C"/>
+  <circle cx="26" cy="15" r="5" fill="#00C27C"/>
+  <circle cx="-26" cy="15" r="5" fill="#00C27C"/>
+  <line x1="0" y1="-30" x2="26" y2="15" stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.65"/>
+  <line x1="0" y1="-30" x2="-26" y2="15" stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.65"/>
+  <line x1="26" y1="15" x2="-26" y2="15" stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.65"/>
+  <line x1="0" y1="15" x2="0" y2="-18" stroke="#00C27C" stroke-width="3" stroke-linecap="round"/>
+  <polyline points="-7,-11 0,-21 7,-11" fill="none" stroke="#00C27C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
 <div class="shell">
+
+  <!-- HEADER with real SVG logo -->
   <header>
-    <div class="logo">Agent<em>Float</em></div>
+    <a class="header-logo" href="/" title="AgentFloat">
+      <!-- Horizontal logo: hex mark + wordmark -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 52" fill="none">
+        <!-- Hex mark -->
+        <polygon points="26,2 48,14 48,38 26,50 4,38 4,14" fill="none" stroke="#00C27C" stroke-width="2.2" stroke-linejoin="round"/>
+        <polygon points="26,12 40,20 40,32 26,40 12,32 12,20" fill="#0A1628"/>
+        <!-- Network nodes -->
+        <circle cx="26" cy="18" r="3" fill="#00C27C"/>
+        <circle cx="34" cy="31" r="3" fill="#00C27C"/>
+        <circle cx="18" cy="31" r="3" fill="#00C27C"/>
+        <!-- Edges -->
+        <line x1="26" y1="18" x2="34" y2="31" stroke="#00C27C" stroke-width="1.1" stroke-opacity="0.6"/>
+        <line x1="26" y1="18" x2="18" y2="31" stroke="#00C27C" stroke-width="1.1" stroke-opacity="0.6"/>
+        <line x1="34" y1="31" x2="18" y2="31" stroke="#00C27C" stroke-width="1.1" stroke-opacity="0.6"/>
+        <!-- Rising arrow -->
+        <line x1="26" y1="31" x2="26" y2="22" stroke="#00C27C" stroke-width="2" stroke-linecap="round"/>
+        <polyline points="22,26 26,20 30,26" fill="none" stroke="#00C27C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Wordmark -->
+        <text x="62" y="20" font-family="Syne,system-ui,sans-serif" font-size="16" font-weight="800" letter-spacing="-0.4" fill="#0A1628">Agent</text>
+        <text x="62" y="38" font-family="Syne,system-ui,sans-serif" font-size="16" font-weight="800" letter-spacing="-0.4" fill="#00C27C">Float</text>
+      </svg>
+    </a>
+
     <div class="mode-badge" id="mBadge">Demo Mode</div>
     <div class="pdot" id="pDot"></div>
+
     <div class="hstats">
       <div class="hst"><span class="hl">Transactions</span><span class="hv" id="hTx">0</span></div>
       <div class="hst"><span class="hl">USDC Spent</span><span class="hv g" id="hCost">$0.000000</span></div>
@@ -144,6 +205,7 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
     </div>
   </header>
 
+  <!-- LEFT SIDEBAR -->
   <aside class="sdl">
     <div class="phd">Agent Pool</div>
     <div class="ac" id="card-orchestrator">
@@ -186,6 +248,7 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
     </div>
   </aside>
 
+  <!-- MAIN -->
   <main class="main">
     <div class="twrap">
       <div class="tlbl">Submit task to agent pipeline</div>
@@ -206,21 +269,36 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
     </div>
     <div class="rarea">
       <div class="emp" id="emp">
-        <div class="eico">&#9889;</div>
+        <!-- Logo watermark in empty state -->
+        <div class="emp-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="-70 -70 140 140">
+            <polygon points="0,-60 52,-30 52,30 0,60 -52,30 -52,-30" fill="none" stroke="#0A1628" stroke-width="3" stroke-linejoin="round"/>
+            <polygon points="0,-42 36,-21 36,21 0,42 -36,21 -36,-21" fill="#0A1628"/>
+            <circle cx="0"   cy="-24" r="5.5" fill="#00C27C"/>
+            <circle cx="21"  cy="12"  r="5.5" fill="#00C27C"/>
+            <circle cx="-21" cy="12"  r="5.5" fill="#00C27C"/>
+            <line x1="0" y1="-24" x2="21"  y2="12"  stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.6"/>
+            <line x1="0" y1="-24" x2="-21" y2="12"  stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.6"/>
+            <line x1="21" y1="12" x2="-21" y2="12"  stroke="#00C27C" stroke-width="1.8" stroke-opacity="0.6"/>
+            <line x1="0" y1="12" x2="0" y2="-16" stroke="#00C27C" stroke-width="2.8" stroke-linecap="round"/>
+            <polyline points="-7,-9 0,-19 7,-9" fill="none" stroke="#00C27C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <div class="etit">No Active Pipeline</div>
-        <div class="esub">Enter a task and press Run Pipeline to watch agents coordinate, pay each other in USDC on Arc, and deliver a report.</div>
+        <div class="esub">Enter a task and press Run Pipeline. Watch agents coordinate, pay each other in USDC on Arc, and deliver a report.</div>
       </div>
       <div class="rbox" id="rbox">
         <div class="pwrap" id="pw"></div>
         <div class="rhdr"><span class="rtag">Pipeline Output</span><span class="rtit" id="rtit"></span></div>
         <div class="rbody" id="rbody"></div>
-        <div class="mnote" id="mn"><strong>Margin explanation:</strong> Each action above costs $0.0005–$0.0025 USDC. On Ethereum mainnet a single ERC-20 transfer costs $2–5 in gas — making this model <strong>mathematically impossible</strong> on conventional chains. Arc settles in USDC natively with sub-cent fees and sub-second finality. That is the only infrastructure where AgentFloat works.</div>
+        <div class="mnote" id="mn"><strong>Margin explanation:</strong> Each action costs $0.0005–$0.0025 USDC via x402. On Ethereum mainnet a single ERC-20 transfer costs $2–5 in gas — making this model <strong>mathematically impossible</strong> on conventional chains. Arc settles in USDC natively with sub-cent fees and sub-second finality — the only infrastructure where AgentFloat works.</div>
       </div>
     </div>
   </main>
 
+  <!-- RIGHT SIDEBAR -->
   <aside class="sdr">
-    <div class="phd">Live Transactions &middot; Arc</div>
+    <div class="phd">Live Transactions · Arc</div>
     <div class="txf" id="txf"><div class="txe">Transactions will stream here as agents work.</div></div>
     <div class="ypan">
       <div class="yt">USYC Treasury Pool</div>
@@ -233,17 +311,15 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
 </div>
 
 <script>
-// ── Canvas network animation ────────────────────────────────────────────────
 const CV=document.getElementById('netCanvas'),CT=CV.getContext('2d');
 let CW=0,CH=0;
 function resize(){CW=CV.width=window.innerWidth;CH=CV.height=window.innerHeight}
 window.addEventListener('resize',resize);resize();
-const COLS={o:'#0A1628',r:'#2563EB',a:'#F59E0B',w:'#00C27C',g:'#94A3B8'};
+const COLS=['#0A1628','#2563EB','#F59E0B','#00C27C','#94A3B8'];
 let nodes=[],pulses=[];
-for(let i=0;i<30;i++){
-  const types=['o','r','a','w','g','g','g','g'];
-  const t=types[Math.floor(Math.random()*types.length)];
-  nodes.push({x:Math.random()*CW,y:Math.random()*CH,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,r:t==='o'?6:Math.random()*2+3,t,c:COLS[t],p:0,pd:1});
+for(let i=0;i<32;i++){
+  const t=COLS[i%COLS.length];
+  nodes.push({x:Math.random()*CW,y:Math.random()*CH,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,r:Math.random()*2.5+3,c:t,p:0,pd:1});
 }
 function fp(fi,ti,col){pulses.push({fi,ti,t:0,c:col||'#00C27C',s:Math.random()*.014+.012})}
 function draw(){
@@ -251,19 +327,20 @@ function draw(){
   nodes.forEach(n=>{n.x+=n.vx;n.y+=n.vy;if(n.x<-20)n.x=CW+20;if(n.x>CW+20)n.x=-20;if(n.y<-20)n.y=CH+20;if(n.y>CH+20)n.y=-20;n.p+=.04*n.pd;if(n.p>1||n.p<0)n.pd*=-1});
   for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
     const a=nodes[i],b=nodes[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy);
-    if(d<165){CT.beginPath();CT.moveTo(a.x,a.y);CT.lineTo(b.x,b.y);CT.strokeStyle=`rgba(10,22,40,${(1-d/165)*.1})`;CT.lineWidth=.8;CT.stroke()}
+    if(d<170){CT.beginPath();CT.moveTo(a.x,a.y);CT.lineTo(b.x,b.y);CT.strokeStyle=`rgba(10,22,40,${(1-d/170)*.08})`;CT.lineWidth=.8;CT.stroke()}
   }
   nodes.forEach(n=>{
-    CT.beginPath();CT.arc(n.x,n.y,n.r+4+n.p*3,0,Math.PI*2);CT.fillStyle=n.c+'1A';CT.fill();
-    CT.beginPath();CT.arc(n.x,n.y,n.r,0,Math.PI*2);CT.fillStyle=n.c+'CC';CT.fill();
-    CT.beginPath();CT.arc(n.x,n.y,n.r*.4,0,Math.PI*2);CT.fillStyle='rgba(255,255,255,.75)';CT.fill();
+    const cr=parseInt(n.c.slice(1,3),16),cg=parseInt(n.c.slice(3,5),16),cb=parseInt(n.c.slice(5,7),16);
+    CT.beginPath();CT.arc(n.x,n.y,n.r+5+n.p*3,0,Math.PI*2);CT.fillStyle=`rgba(${cr},${cg},${cb},0.07)`;CT.fill();
+    CT.beginPath();CT.arc(n.x,n.y,n.r,0,Math.PI*2);CT.fillStyle=`rgba(${cr},${cg},${cb},0.75)`;CT.fill();
+    CT.beginPath();CT.arc(n.x,n.y,n.r*.38,0,Math.PI*2);CT.fillStyle='rgba(255,255,255,.7)';CT.fill();
   });
   pulses=pulses.filter(p=>{
     const a=nodes[p.fi],b=nodes[p.ti];if(!a||!b)return false;
     p.t+=p.s;if(p.t>=1)return false;
     const x=a.x+(b.x-a.x)*p.t,y=a.y+(b.y-a.y)*p.t;
-    const g=CT.createRadialGradient(x,y,0,x,y,9);g.addColorStop(0,p.c+'FF');g.addColorStop(1,p.c+'00');
-    CT.beginPath();CT.arc(x,y,9,0,Math.PI*2);CT.fillStyle=g;CT.fill();
+    const g=CT.createRadialGradient(x,y,0,x,y,10);g.addColorStop(0,p.c+'FF');g.addColorStop(1,p.c+'00');
+    CT.beginPath();CT.arc(x,y,10,0,Math.PI*2);CT.fillStyle=g;CT.fill();
     CT.beginPath();CT.arc(x,y,3.5,0,Math.PI*2);CT.fillStyle=p.c;CT.fill();
     return true;
   });
@@ -272,12 +349,11 @@ function draw(){
 draw();
 function autoP(){
   const f=Math.floor(Math.random()*nodes.length);let t=Math.floor(Math.random()*nodes.length);while(t===f)t=Math.floor(Math.random()*nodes.length);
-  fp(f,t,['#00C27C','#2563EB','#F59E0B','#0A1628'][Math.floor(Math.random()*4)]);
-  setTimeout(autoP,Math.random()*600+300);
+  fp(f,t,COLS[Math.floor(Math.random()*COLS.length)]);
+  setTimeout(autoP,Math.random()*600+280);
 }
 autoP();
 
-// ── App ────────────────────────────────────────────────────────────────────
 let cost=0,yld=0,txn=0,sid='',running=false,chips={};
 const socket=io();
 socket.on('connect',()=>{document.getElementById('pDot').classList.add('live');sid=socket.id});

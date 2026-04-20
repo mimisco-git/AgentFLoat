@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="160" viewBox="0 0 480 160">
+  <!-- AgentFloat — Horizontal Logo Lockup -->
+  <!-- Icon mark: hexagonal network node with rising yield arrow -->
+  <g transform="translate(80, 80)">
+    <!-- Outer hex ring -->
+    <polygon points="0,-58 50,-29 50,29 0,58 -50,29 -50,-29"
+             fill="none" stroke="#00C27C" stroke-width="3" stroke-linejoin="round"/>
+    <!-- Inner dark hex -->
+    <polygon points="0,-40 35,-20 35,20 0,40 -35,20 -35,-20"
+             fill="#0A1628"/>
+    <!-- Network nodes -->
+    <circle cx="0"   cy="-22" r="4.5" fill="#00C27C"/>
+    <circle cx="19"  cy="11"  r="4.5" fill="#00C27C"/>
+    <circle cx="-19" cy="11"  r="4.5" fill="#00C27C"/>
+    <!-- Connecting lines -->
+    <line x1="0"   y1="-22" x2="19"  y2="11"  stroke="#00C27C" stroke-width="1.5" stroke-opacity="0.6"/>
+    <line x1="0"   y1="-22" x2="-19" y2="11"  stroke="#00C27C" stroke-width="1.5" stroke-opacity="0.6"/>
+    <line x1="19"  y1="11"  x2="-19" y2="11"  stroke="#00C27C" stroke-width="1.5" stroke-opacity="0.6"/>
+    <!-- Rising yield arrow -->
+    <line x1="0" y1="11" x2="0" y2="-14" stroke="#00C27C" stroke-width="2.5" stroke-linecap="round"/>
+    <polyline points="-6,-8 0,-17 6,-8" fill="none" stroke="#00C27C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="152" y="68"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="48" font-weight="800" letter-spacing="-1.5"
+        fill="#0A1628">Agent</text>
+  <text x="152" y="115"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="48" font-weight="800" letter-spacing="-1.5"
+        fill="#00C27C">Float</text>
+</svg>
