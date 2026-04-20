@@ -289,7 +289,12 @@ header{
   </aside>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 <script>
+/* ── Config — set RAILWAY_URL to your Railway backend URL to enable live mode ── */
+const RAILWAY_URL = "";   // e.g. "https://agentfloat-backend.up.railway.app"
+const USE_BACKEND  = RAILWAY_URL.length > 0;
+
 /* ── Canvas Network Animation ──────────────────────────────────────────────── */
 const CV=document.getElementById('netCanvas'),CT=CV.getContext('2d');
 let CW=0,CH=0;
@@ -396,6 +401,9 @@ let totalCost=0,txCount=0,running=false,chips={},pipelineTimer=null;
 async function go(){
   const task=document.getElementById('taskIn').value.trim();
   if(!task||running)return;
+  // If Railway backend is configured, use it
+  if(USE_BACKEND){return goLive(task);}
+  // Otherwise run full JS demo
   running=true;totalCost=0;txCount=0;totalYieldEarned=0;
   usycBalances={orchestrator:5,researcher:5,analyst:5,writer:5};
 
@@ -540,6 +548,69 @@ function resetAgentCards(){
     const c=document.getElementById('card-'+id),a=document.getElementById('act-'+id);
     if(c)c.className='ac';if(a)a.textContent=id==='orchestrator'?'Planning...':'Standby';
   });
+}
+
+/* ── Live backend mode (Railway) ─────────────────────────────────────────── */
+let socket = null;
+
+function initSocket(){
+  if(socket) return;
+  socket = io(RAILWAY_URL, {transports:['websocket','polling']});
+  socket.on('connect',()=>{
+    document.getElementById('pDot').classList.add('live');
+    document.getElementById('mBadge').textContent='Live Mode';
+    document.getElementById('mBadge').style.cssText='background:#fee2e2;color:#b91c1c;border-color:rgba(239,68,68,.3)';
+  });
+  socket.on('disconnect',()=>document.getElementById('pDot').classList.remove('live'));
+  socket.on('status',d=>{setSt(d.phase||'working',d.message||'');if(d.plan)renderPlan(d.plan)});
+  socket.on('agent_active',d=>setAgentActive(d.agent,d.action));
+  socket.on('agent_done',d=>setAgentIdle(d.agent));
+  socket.on('transaction',d=>{
+    totalCost+=d.amount;txCount=d.total_tx||txCount+1;addTx(d);updateMetrics();
+    fp(Math.floor(Math.random()*nodes.length),Math.floor(Math.random()*nodes.length),AGENT_COLORS[d.agent]||'#00C27C');
+  });
+  socket.on('yield_update',d=>{
+    totalYieldEarned=d.total_yield||0;
+    if(d.agents){for(const[ai,sn]of Object.entries(d.agents)){const ue=document.getElementById('usyc-'+ai),ye=document.getElementById('yld-'+ai);if(ue)ue.textContent=sn.usyc_balance.toFixed(4);if(ye)ye.textContent=(sn.yield_earned*1000).toFixed(4)+'m'}
+    const tot=Object.values(d.agents).reduce((s,a)=>s+a.usyc_balance,0);
+    document.getElementById('yF').textContent=tot.toFixed(4);
+    document.getElementById('yS').textContent='$'+totalYieldEarned.toFixed(8);
+    document.getElementById('yB').style.width=(totalCost>0?Math.min((totalYieldEarned/totalCost)*100,100):0)+'%';}
+    document.getElementById('mYield').textContent='$'+totalYieldEarned.toFixed(8);
+    document.getElementById('hYield').textContent='$'+totalYieldEarned.toFixed(8);
+    document.getElementById('mNet').textContent='$'+Math.max(totalCost-totalYieldEarned,0).toFixed(6);
+  });
+  socket.on('task_complete',d=>{
+    running=false;resetBtn();
+    setSt('complete',`Done — ${d.tx_count} txns · $${d.total_cost.toFixed(6)} total`);
+    document.getElementById('sph').className='sph done';
+    if(d.report){document.getElementById('rtit').textContent=document.getElementById('taskIn').value.trim().slice(0,72);document.getElementById('rbody').textContent=d.report;}
+    markAllDone();document.getElementById('mn').classList.add('vis');
+  });
+  socket.on('task_error',d=>{running=false;resetBtn();setSt('error','Error: '+d.error);document.getElementById('sph').className='sph err'});
+}
+
+async function goLive(task){
+  running=true;totalCost=0;txCount=0;totalYieldEarned=0;
+  initSocket();
+  const btn=document.getElementById('runBtn');
+  btn.disabled=true;btn.classList.add('run');btn.textContent='RUNNING...';
+  document.getElementById('taskIn').disabled=true;
+  document.getElementById('emp').style.display='none';
+  document.getElementById('rbox').classList.add('vis');
+  document.getElementById('rbody').textContent='';document.getElementById('rtit').textContent='';
+  document.getElementById('mn').classList.remove('vis');document.getElementById('pw').innerHTML='';chips={};
+  resetAgentCards();document.getElementById('txf').innerHTML='';
+  setSt('starting','Connecting to agent pool...');document.getElementById('sph').className='sph act';
+  try{
+    const r=await fetch(RAILWAY_URL+'/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task,sid:socket.id})});
+    const d=await r.json();if(d.error)throw new Error(d.error);
+  }catch(e){setSt('error',e.message);document.getElementById('sph').className='sph err';running=false;resetBtn();}
+}
+
+function resetBtn(){
+  const b=document.getElementById('runBtn');b.disabled=false;b.classList.remove('run');b.textContent='▶ RUN PIPELINE';
+  document.getElementById('taskIn').disabled=false;
 }
 
 document.getElementById('taskIn').addEventListener('keydown',e=>{if(e.key==='Enter')go()});

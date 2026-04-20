@@ -1,8 +1,10 @@
 """
 app.py — AgentFloat main server
 Arc + Circle Nanopayments + x402 + ERC-8004 + USYC + AIsa
+Railway-compatible: reads PORT from environment
 """
 
+import os
 import threading
 import time
 from flask import Flask, request, jsonify, send_from_directory
@@ -12,17 +14,19 @@ from flask_cors import CORS
 from config import DEMO_MODE, PRICES
 from payments.circle_client import create_wallet
 from payments.usyc_treasury import AgentTreasury, TreasuryPool
-from payments.x402 import x402_required, build_payment_requirement
+from payments.x402 import x402_required
 from payments.erc8004 import registry
 from agents.orchestrator import Orchestrator
 from agents.specialists import build_specialist
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 app.config["SECRET_KEY"] = "agentfloat-arc-2026"
-CORS(app)
+
+# Allow both Vercel frontend and local dev
+CORS(app, origins=["https://agent-f-loat.vercel.app", "http://localhost:3000", "http://localhost:8000", "*"])
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
-AGENTS       = {}
+AGENTS        = {}
 TREASURY_POOL = TreasuryPool()
 
 
@@ -39,7 +43,6 @@ def init_agent_pool():
         treasury = AgentTreasury(wallet_id=wallet["wallet_id"], initial_usyc=5.0)
         TREASURY_POOL.add(aid, treasury)
         AGENTS[aid] = {"wallet": wallet, "treasury": treasury}
-        # Register ERC-8004 identity on Arc
         registry.register(
             agent_id=aid,
             display_name=label,
@@ -47,9 +50,6 @@ def init_agent_pool():
             wallet_address=wallet["address"],
         )
     print(f"[AgentFloat] Pool ready. DEMO_MODE={DEMO_MODE}")
-    for aid, a in AGENTS.items():
-        identity = registry.get(aid)
-        print(f"  {aid}: {a['wallet']['wallet_id']}  erc8004={identity.erc8004_token[:18]}...")
 
 
 def yield_ticker():
@@ -96,7 +96,6 @@ def status():
 
 @app.route("/api/trust")
 def trust_leaderboard():
-    """ERC-8004 agent trust leaderboard."""
     return jsonify({
         "leaderboard": registry.leaderboard(),
         "standard":    "ERC-8004",
@@ -109,32 +108,27 @@ def prices():
     return jsonify(PRICES)
 
 
-# ── x402-protected agent endpoints ───────────────────────────────────────────
-
+# x402-protected agent endpoints
 @app.route("/api/agent/web_search", methods=["GET", "POST"])
 @x402_required("web_search", "0xAgentFloatTreasury")
 def agent_web_search():
-    """x402-gated web search endpoint. Agents pay $0.001 USDC per call."""
-    query = request.args.get("q", request.json.get("q", "") if request.is_json else "")
-    return jsonify({"endpoint": "web_search", "query": query, "result": "Data returned", "chain": "Arc", "standard": "x402"})
+    query = request.args.get("q", "")
+    return jsonify({"endpoint": "web_search", "query": query, "chain": "Arc", "standard": "x402"})
 
 
 @app.route("/api/agent/analyze", methods=["GET", "POST"])
 @x402_required("analyze", "0xAgentFloatTreasury")
 def agent_analyze():
-    """x402-gated analysis endpoint. Agents pay $0.0015 USDC per call."""
-    return jsonify({"endpoint": "analyze", "result": "Analysis complete", "chain": "Arc", "standard": "x402"})
+    return jsonify({"endpoint": "analyze", "chain": "Arc", "standard": "x402"})
 
 
 @app.route("/api/agent/write", methods=["GET", "POST"])
 @x402_required("write_paragraph", "0xAgentFloatTreasury")
 def agent_write():
-    """x402-gated writing endpoint. Agents pay $0.002 USDC per call."""
-    return jsonify({"endpoint": "write_paragraph", "result": "Content generated", "chain": "Arc", "standard": "x402"})
+    return jsonify({"endpoint": "write_paragraph", "chain": "Arc", "standard": "x402"})
 
 
-# ── Pipeline run ──────────────────────────────────────────────────────────────
-
+# Pipeline
 @app.route("/api/run", methods=["POST"])
 def run_task():
     body = request.get_json(silent=True) or {}
@@ -144,7 +138,10 @@ def run_task():
     sid = body.get("sid", "")
 
     def emit_fn(event, data):
-        socketio.emit(event, data, room=sid) if sid else socketio.emit(event, data)
+        if sid:
+            socketio.emit(event, data, room=sid)
+        else:
+            socketio.emit(event, data)
 
     def pipeline():
         try:
@@ -168,8 +165,7 @@ def run_task():
     return jsonify({"message": "Pipeline started", "mode": "demo" if DEMO_MODE else "live"})
 
 
-# ── Sockets ───────────────────────────────────────────────────────────────────
-
+# Sockets
 @socketio.on("connect")
 def on_connect():
     emit("connected", {"sid": request.sid, "mode": "demo" if DEMO_MODE else "live"})
@@ -178,4 +174,5 @@ def on_connect():
 if __name__ == "__main__":
     init_agent_pool()
     threading.Thread(target=yield_ticker, daemon=True).start()
-    socketio.run(app, host="0.0.0.0", port=8000, debug=False)
+    port = int(os.environ.get("PORT", 8000))
+    socketio.run(app, host="0.0.0.0", port=port, debug=False)
