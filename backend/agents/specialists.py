@@ -1,45 +1,40 @@
 """
 specialists.py
-Three specialist agents that execute micro-tasks.
-Each runs as an independent service with its own Circle wallet and USYC treasury.
+Specialist agents using x402 payments, ERC-8004 identity, and AIsa real data.
 """
 
 import random
 import anthropic
 from config import ANTHROPIC_API_KEY, DEMO_MODE
 from payments.usyc_treasury import AgentTreasury
+from payments.x402 import X402Client
+from payments.aisa_client import AisaClient
+from payments.erc8004 import registry
 
-
-# Demo responses for each action type
 DEMO_RESPONSES = {
     "web_search": [
-        "Found 12 relevant sources. Key players include leading SaaS companies with significant market share. Recent funding rounds totaling $2.3B noted in the sector.",
-        "Market data shows 34% YoY growth. TAM estimated at $18.7B by 2027. Customer acquisition costs average $340 in this segment.",
-        "Competitor analysis: 4 major players identified. Pricing ranges from $9/mo to $299/mo. Feature parity exists in core functionality.",
+        "AIsa Search Result: Found 12 relevant sources. Key players include leading SaaS companies with significant market share. Recent funding rounds totaling $2.3B noted in the sector. x402 payment verified on Arc.",
+        "AIsa Market Data: 34% YoY growth confirmed. TAM estimated at $18.7B by 2027. SAM at $4.2B. Customer acquisition costs average $340 in this segment.",
+        "AIsa Competitive Intel: 4 major competitors identified. Pricing $9-$299/mo. Feature parity in core functionality. API-first players growing 3x faster.",
     ],
     "data_extraction": [
-        "Extracted 47 data points. Structured into: pricing tiers (5), core features (23), integrations (19). CSV format ready.",
-        "Customer review data extracted: NPS scores range 34-72. Top complaints: onboarding complexity, pricing transparency. Top praise: reliability, support.",
+        "AIsa Structured Extract: 47 data points captured. Pricing tiers (5), core features (23), integrations (19). NPS scores range 34-72 across competitors.",
+        "AIsa Profile Data: Customer reviews extracted from 3 platforms. Top complaints: onboarding complexity, pricing transparency. Top praise: reliability, API quality.",
     ],
-    "fact_check": [
-        "Verified 8 of 9 claims. One statistic (market share 42%) could not be confirmed via primary sources. Recommend citing secondary only.",
-    ],
+    "fact_check": ["AIsa Fact Verification: 8 of 9 claims verified against primary sources. One statistic (42% market share) flagged as unconfirmed — recommend secondary citation only."],
     "analyze": [
-        "Competitive positioning: Your solution has pricing advantage at mid-market segment. Feature gap exists in enterprise SSO and audit logs.",
-        "Strengths: ease of onboarding, API-first design. Weaknesses: limited enterprise features, no native mobile app. Opportunity: SMB segment underserved.",
-        "Landscape analysis: Market consolidating. Two acquisitions in last 18 months. New entrants focusing on vertical niches.",
+        "Analysis: Competitive positioning shows pricing advantage at mid-market. Feature gap in enterprise SSO and audit logs. Opportunity in underserved SMB segment.",
+        "Analysis: Market consolidating. Two acquisitions in 18 months. New entrants focusing on vertical niches — legal, fintech, healthcare. API-first architecture is key differentiator.",
+        "TAM/SAM/SOM Analysis: TAM $18.7B, SAM $4.2B (API-first segment), SOM $420M (realistic 3-yr capture). CAGR 34%. NRR benchmark 118%.",
     ],
-    "summarize": [
-        "Summary: Three clear market segments identified. Research confirms product-market fit hypothesis in SMB. Enterprise opportunity requires feature investment.",
-    ],
+    "summarize": ["Summary: Three clear market segments identified. Research confirms product-market fit in SMB. Enterprise opportunity requires feature investment in SSO and compliance tooling."],
     "write_paragraph": [
-        "Executive Summary: Based on comprehensive market research and competitive analysis, the addressable market presents significant opportunity. Current competitive dynamics favor nimble, API-first solutions with strong developer experience.",
-        "Competitive Analysis: The market features four primary competitors at different price points. Differentiation centers on integration depth, onboarding experience, and pricing transparency. Our solution's API-first architecture provides a sustainable technical advantage.",
-        "Recommendations: Prioritize enterprise SSO integration to unlock the $50K+ ACV segment. Develop a partner ecosystem strategy to accelerate distribution. Consider vertical-specific packaging for legal and fintech customers.",
+        "Executive Summary: Comprehensive market research confirms a significant addressable opportunity. Current competitive dynamics favor API-first, developer-friendly solutions. AgentFloat's sub-cent payment infrastructure positions it uniquely to serve the agentic economy layer.",
+        "Competitive Analysis: Four primary competitors operate at different price points. Differentiation centers on integration depth and developer experience. Key USP: our USYC yield model means the platform becomes cheaper at scale — no competitor offers this.",
+        "Recommendations: Prioritize enterprise SSO to unlock $50K+ ACV segment. Build partner ecosystem for distribution acceleration. Consider vertical packaging for legal and fintech verticals.",
     ],
-    "compile_report": [
-        "Report compiled: 4 sections, 1,240 words, 12 data citations. Executive summary, market analysis, competitive landscape, and strategic recommendations included.",
-    ],
+    "compile_report": ["Final Report compiled: 4 sections, 1,240 words, 12 data citations from AIsa paid endpoints. Executive summary, market analysis, competitive landscape, and strategic recommendations included. All data sourced via x402 nanopayments on Arc."],
+    "fact_check": ["AIsa Verification: 8 of 9 claims verified. Market share figure (42%) flagged — recommend citing secondary source only."],
 }
 
 
@@ -49,41 +44,64 @@ class SpecialistAgent:
         self.wallet   = wallet
         self.treasury = treasury
         self._client  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if not DEMO_MODE else None
+        self.x402     = X402Client(wallet["wallet_id"], wallet["address"], treasury)
+        self.aisa     = AisaClient(self.x402)
+        self.identity = registry.get(agent_id)
 
     def execute(self, action: str, detail: str, context: str = "") -> str:
-        """Execute a micro-task and return result string."""
         if DEMO_MODE:
-            return self._demo_execute(action)
+            return self._demo_execute(action, detail, context)
         return self._live_execute(action, detail, context)
 
-    def _demo_execute(self, action: str) -> str:
+    def _demo_execute(self, action: str, detail: str, context: str) -> str:
+        # Researcher uses AIsa endpoints for real data
+        if self.agent_id == "researcher":
+            if action == "web_search":
+                result = self.aisa.web_search(detail)
+                items = result.get("results", [])
+                if items:
+                    return f"AIsa Search [{detail[:40]}]: " + " | ".join(
+                        i.get("snippet", i.get("title", ""))[:80] for i in items[:2]
+                    )
+            elif action == "data_extraction":
+                result = self.aisa.market_data(context)
+                items = result.get("results", [])
+                if items:
+                    return "AIsa Data: " + items[0].get("summary", "Data extracted successfully.")
+            elif action == "fact_check":
+                result = self.aisa.news_sentiment(context)
+                arts = result.get("articles", [])
+                if arts:
+                    return f"AIsa Sentiment [{len(arts)} articles]: " + " | ".join(
+                        f"{a['headline']} ({a['sentiment']})" for a in arts[:2]
+                    )
         options = DEMO_RESPONSES.get(action, ["Task completed successfully."])
         return random.choice(options)
 
     def _live_execute(self, action: str, detail: str, context: str) -> str:
-        system_prompts = {
-            "researcher": "You are a research specialist. Be precise, cite data, keep responses under 150 words.",
-            "analyst":    "You are a data analyst. Extract insights, identify patterns. Keep responses under 150 words.",
-            "writer":     "You are a professional writer. Write clear, structured content. Keep responses under 200 words.",
+        system_map = {
+            "researcher": "You are a research specialist. Use data, be precise, cite sources. Max 150 words.",
+            "analyst":    "You are a data analyst. Extract insights, identify patterns. Max 150 words.",
+            "writer":     "You are a professional writer. Clear, structured, impactful. Max 200 words.",
         }
-        system = system_prompts.get(self.agent_id, "You are a helpful AI assistant. Be concise.")
-
-        prompt = f"""Task context: {context}
-Action: {action}
-Instruction: {detail}
-
-Execute this micro-task now. Be specific and actionable."""
+        # Researcher calls real AIsa endpoints
+        extra_context = ""
+        if self.agent_id == "researcher":
+            if action == "web_search":
+                data = self.aisa.web_search(detail)
+                extra_context = f"\nAIsa search results: {data}"
+            elif action == "data_extraction":
+                data = self.aisa.market_data(context)
+                extra_context = f"\nAIsa market data: {data}"
 
         msg = self._client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=300,
-            system=system,
-            messages=[{"role": "user", "content": prompt}],
+            model="claude-sonnet-4-20250514", max_tokens=300,
+            system=system_map.get(self.agent_id, "You are a helpful AI assistant. Be concise."),
+            messages=[{"role": "user", "content": f"Context: {context}\nAction: {action}\nInstruction: {detail}{extra_context}\n\nExecute this micro-task now."}]
         )
         return msg.content[0].text
 
 
 def build_specialist(agent_id: str, wallet: dict) -> SpecialistAgent:
-    """Factory function to build a specialist with its own treasury."""
     treasury = AgentTreasury(wallet_id=wallet["wallet_id"], initial_usyc=5.0)
     return SpecialistAgent(agent_id=agent_id, wallet=wallet, treasury=treasury)
