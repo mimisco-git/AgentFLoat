@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AgentFloat — The Agent Economy That Pays for Itself</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+/* ── Reset & Variables ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0a0c0f;
+  --bg2:        #0f1318;
+  --bg3:        #141920;
+  --border:     #1e2730;
+  --border2:    #253040;
+  --green:      #00e5a0;
+  --green-dim:  #00a870;
+  --green-glow: rgba(0,229,160,0.15);
+  --amber:      #f5a623;
+  --amber-dim:  #c07d10;
+  --red:        #ff4d6d;
+  --blue:       #4d9fff;
+  --text:       #cdd6e0;
+  --text-dim:   #6b7d8e;
+  --text-faint: #3a4a58;
+  --mono:       'Space Mono', monospace;
+  --sans:       'DM Sans', sans-serif;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+/* ── Scanline overlay ──────────────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+}
+
+/* ── Layout ────────────────────────────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  grid-template-columns: 260px 1fr 320px;
+  height: 100vh;
+  gap: 0;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+header {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  position: relative;
+}
+.logo {
+  font-family: var(--mono);
+  font-size: 15px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--green);
+}
+.logo span { color: var(--text-dim); font-weight: 400; }
+.mode-pill {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+  padding: 3px 8px; border-radius: 2px;
+  background: var(--green-glow); color: var(--green); border: 1px solid var(--green-dim);
+  text-transform: uppercase;
+}
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 20px; }
+.stat-chip { display: flex; flex-direction: column; align-items: flex-end; }
+.stat-chip .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
+.stat-chip .value { font-family: var(--mono); font-size: 13px; color: var(--green); font-weight: 700; }
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,229,160,0.6); } 50% { box-shadow: 0 0 0 5px rgba(0,229,160,0); } }
+
+/* ── Left sidebar: Agents ──────────────────────────────────────────────────── */
+.sidebar-left {
+  border-right: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.panel-title {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--text-dim); padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.agent-card {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+.agent-card.active { background: var(--green-glow); }
+.agent-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.agent-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); transition: background 0.3s; flex-shrink: 0; }
+.agent-card.active .agent-dot { background: var(--green); animation: pulse 1s infinite; }
+.agent-card.idle .agent-dot { background: var(--amber); }
+.agent-name { font-family: var(--mono); font-size: 11px; color: var(--text); letter-spacing: 0.04em; }
+.agent-action { font-size: 10px; color: var(--text-dim); margin-left: 15px; min-height: 14px; }
+.agent-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; }
+.mini-stat { background: var(--bg3); padding: 5px 8px; border-radius: 3px; }
+.mini-stat .k { font-size: 8px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+.mini-stat .v { font-family: var(--mono); font-size: 11px; color: var(--green); }
+
+/* ── Center: Main panel ────────────────────────────────────────────────────── */
+.main {
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* Task input */
+.task-input-wrap {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.task-label {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--text-dim); margin-bottom: 8px;
+}
+.input-row { display: flex; gap: 10px; }
+.task-input {
+  flex: 1;
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: 4px;
+  color: var(--text); font-family: var(--sans); font-size: 13px;
+  padding: 10px 14px; outline: none;
+  transition: border-color 0.2s;
+}
+.task-input:focus { border-color: var(--green-dim); }
+.task-input::placeholder { color: var(--text-faint); }
+.run-btn {
+  background: var(--green); color: #000; font-family: var(--mono);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  padding: 10px 18px; border: none; border-radius: 4px; cursor: pointer;
+  text-transform: uppercase; transition: opacity 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+.run-btn:hover { opacity: 0.85; }
+.run-btn:active { transform: scale(0.97); }
+.run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Status bar */
+.status-bar {
+  padding: 8px 20px;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--green); border-bottom: 1px solid var(--border);
+  min-height: 32px; background: var(--bg2);
+  display: flex; align-items: center; gap: 8px;
+}
+.status-bar .phase {
+  color: var(--text-dim); font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 2px 6px;
+  border: 1px solid var(--border2); border-radius: 2px;
+}
+
+/* Metrics strip */
+.metrics-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--border);
+}
+.metric {
+  padding: 12px 16px;
+  border-right: 1px solid var(--border);
+}
+.metric:last-child { border-right: none; }
+.metric .mlabel { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); }
+.metric .mvalue { font-family: var(--mono); font-size: 22px; font-weight: 700; margin-top: 2px; }
+.metric .mvalue.green { color: var(--green); }
+.metric .mvalue.amber { color: var(--amber); }
+.metric .mvalue.blue  { color: var(--blue);  }
+.metric .mvalue.red   { color: var(--red);   }
+.metric .msub { font-family: var(--mono); font-size: 9px; color: var(--text-dim); margin-top: 1px; }
+
+/* Report area */
+.report-area {
+  flex: 1; overflow-y: auto; padding: 20px;
+}
+.report-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: var(--text-faint); text-align: center;
+}
+.report-empty .big { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; margin-bottom: 6px; }
+.report-empty .small { font-size: 12px; }
+.report-content { display: none; }
+.report-content.visible { display: block; }
+.report-title { font-family: var(--mono); font-size: 12px; color: var(--green); letter-spacing: 0.08em; margin-bottom: 16px; }
+.report-body { font-size: 13px; line-height: 1.75; color: var(--text); white-space: pre-wrap; }
+
+/* Plan steps */
+.plan-steps { margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 6px; }
+.plan-chip {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.06em;
+  padding: 4px 8px; border-radius: 2px; border: 1px solid var(--border2);
+  color: var(--text-dim); transition: all 0.3s;
+}
+.plan-chip.done { border-color: var(--green-dim); color: var(--green); background: var(--green-glow); }
+
+/* ── Right sidebar: Transactions ───────────────────────────────────────────── */
+.sidebar-right {
+  border-left: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.tx-feed { flex: 1; overflow-y: auto; }
+.tx-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  animation: slideIn 0.25s ease;
+}
+@keyframes slideIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+.tx-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.tx-agent {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 2px 6px; border-radius: 2px;
+}
+.tx-agent.researcher { background: rgba(77,159,255,0.12); color: var(--blue); }
+.tx-agent.analyst    { background: rgba(245,166,35,0.12); color: var(--amber); }
+.tx-agent.writer     { background: rgba(0,229,160,0.12); color: var(--green); }
+.tx-agent.orchestrator { background: rgba(255,77,109,0.12); color: var(--red); }
+.tx-amount { font-family: var(--mono); font-size: 11px; color: var(--green); font-weight: 700; }
+.tx-action { font-size: 10px; color: var(--text-dim); margin-bottom: 3px; }
+.tx-hash { font-family: var(--mono); font-size: 8px; color: var(--text-faint); letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-check { color: var(--green); font-size: 10px; }
+
+/* Yield panel */
+.yield-panel {
+  padding: 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+}
+.yield-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); margin-bottom: 10px; }
+.yield-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.yield-row .yk { font-size: 10px; color: var(--text-dim); }
+.yield-row .yv { font-family: var(--mono); font-size: 12px; color: var(--green); }
+.yield-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; }
+.yield-bar { height: 100%; background: var(--green); border-radius: 2px; width: 0%; transition: width 1s ease; }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* margin explanation panel */
+.margin-note {
+  margin: 16px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border2);
+  border-left: 3px solid var(--amber);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  display: none;
+}
+.margin-note.visible { display: block; }
+.margin-note strong { color: var(--amber); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">AGENT<span>FLOAT</span></div>
+    <div class="mode-pill" id="modePill">DEMO MODE</div>
+    <div class="live-dot" id="liveDot" style="background:var(--text-faint)"></div>
+    <div class="header-right">
+      <div class="stat-chip">
+        <span class="label">Total Transactions</span>
+        <span class="value" id="headerTxCount">0</span>
+      </div>
+      <div class="stat-chip">
+        <span class="label">USDC Spent</span>
+        <span class="value" id="headerCost">$0.000000</span>
+      </div>
+      <div class="stat-chip">
+        <span class="label">Yield Earned</span>
+        <span class="value" id="headerYield" style="color:var(--amber)">$0.00000000</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Left sidebar ── -->
+  <aside class="sidebar-left">
+    <div class="panel-title">Agent Pool</div>
+
+    <div class="agent-card" id="card-orchestrator">
+      <div class="agent-header">
+        <div class="agent-dot"></div>
+        <div class="agent-name">ORCHESTRATOR</div>
+      </div>
+      <div class="agent-action" id="action-orchestrator">Waiting for task</div>
+      <div class="agent-stats">
+        <div class="mini-stat"><div class="k">USYC</div><div class="v" id="usyc-orchestrator">5.0000</div></div>
+        <div class="mini-stat"><div class="k">Yield</div><div class="v" id="yield-orchestrator">0.000</div></div>
+      </div>
+    </div>
+
+    <div class="agent-card" id="card-researcher">
+      <div class="agent-header">
+        <div class="agent-dot"></div>
+        <div class="agent-name">RESEARCHER</div>
+      </div>
+      <div class="agent-action" id="action-researcher">Idle</div>
+      <div class="agent-stats">
+        <div class="mini-stat"><div class="k">USYC</div><div class="v" id="usyc-researcher">5.0000</div></div>
+        <div class="mini-stat"><div class="k">Yield</div><div class="v" id="yield-researcher">0.000</div></div>
+      </div>
+    </div>
+
+    <div class="agent-card" id="card-analyst">
+      <div class="agent-header">
+        <div class="agent-dot"></div>
+        <div class="agent-name">ANALYST</div>
+      </div>
+      <div class="agent-action" id="action-analyst">Idle</div>
+      <div class="agent-stats">
+        <div class="mini-stat"><div class="k">USYC</div><div class="v" id="usyc-analyst">5.0000</div></div>
+        <div class="mini-stat"><div class="k">Yield</div><div class="v" id="yield-analyst">0.000</div></div>
+      </div>
+    </div>
+
+    <div class="agent-card" id="card-writer">
+      <div class="agent-header">
+        <div class="agent-dot"></div>
+        <div class="agent-name">WRITER</div>
+      </div>
+      <div class="agent-action" id="action-writer">Idle</div>
+      <div class="agent-stats">
+        <div class="mini-stat"><div class="k">USYC</div><div class="v" id="usyc-writer">5.0000</div></div>
+        <div class="mini-stat"><div class="k">Yield</div><div class="v" id="yield-writer">0.000</div></div>
+      </div>
+    </div>
+
+    <!-- Why Arc section -->
+    <div style="padding:14px;margin-top:auto;border-top:1px solid var(--border)">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-dim);margin-bottom:8px;">Why Arc?</div>
+      <div style="font-size:10px;color:var(--text-dim);line-height:1.6;">
+        Ethereum gas: <span style="color:var(--red);font-family:var(--mono)">$2–5</span> per tx<br/>
+        Arc nanopay: <span style="color:var(--green);font-family:var(--mono)">&lt;$0.0001</span> per tx<br/>
+        <span style="color:var(--text-faint)">Sub-cent model impossible<br/>without Arc's USDC-native gas.</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main panel ── -->
+  <main class="main">
+
+    <div class="task-input-wrap">
+      <div class="task-label">Submit task to agent pipeline</div>
+      <div class="input-row">
+        <input class="task-input" id="taskInput"
+               placeholder="e.g. Compare the top 5 project management tools for a 10-person startup"
+               autocomplete="off"/>
+        <button class="run-btn" id="runBtn" onclick="runTask()">▶ RUN</button>
+      </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">
+      <span class="phase" id="phaseLabel">READY</span>
+      <span id="statusMsg">Enter a task above to start the agent pipeline.</span>
+    </div>
+
+    <div class="metrics-strip">
+      <div class="metric">
+        <div class="mlabel">USDC Spent</div>
+        <div class="mvalue green" id="metricCost">$0.000000</div>
+        <div class="msub">via Arc nanopayments</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">USYC Yield Earned</div>
+        <div class="mvalue amber" id="metricYield">$0.00000000</div>
+        <div class="msub">on idle capital @ 4.75% APY</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Transactions</div>
+        <div class="mvalue blue" id="metricTx">0</div>
+        <div class="msub">onchain, Arc L1</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Net Cost</div>
+        <div class="mvalue green" id="metricNet">$0.000000</div>
+        <div class="msub">cost minus yield subsidy</div>
+      </div>
+    </div>
+
+    <div class="report-area">
+      <div class="report-empty" id="reportEmpty">
+        <div class="big">// NO ACTIVE PIPELINE</div>
+        <div class="small">Enter a task and press RUN to watch the agent economy execute.</div>
+      </div>
+
+      <div class="report-content" id="reportContent">
+        <div class="plan-steps" id="planSteps"></div>
+        <div class="margin-note" id="marginNote">
+          <strong>Margin explanation for judges:</strong> Each action above costs between $0.0005 and $0.0025 USDC.
+          On Ethereum mainnet, a single ERC-20 transfer costs $2–5 in gas at normal congestion.
+          That makes per-action pricing at this scale <strong>mathematically impossible</strong> on conventional chains.
+          Arc settles in USDC natively with sub-cent fees and sub-second finality,
+          which is the only infrastructure where this economic model works.
+        </div>
+        <div class="report-title" id="reportTitle"></div>
+        <div class="report-body" id="reportBody"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ── Right sidebar: TX feed ── -->
+  <aside class="sidebar-right">
+    <div class="panel-title">Live Transactions — Arc</div>
+    <div class="tx-feed" id="txFeed">
+      <div style="padding:20px;color:var(--text-faint);font-size:11px;text-align:center;">
+        Transactions will appear here as agents work.
+      </div>
+    </div>
+    <div class="yield-panel">
+      <div class="yield-title">USYC Treasury Pool</div>
+      <div class="yield-row">
+        <span class="yk">Total USYC float</span>
+        <span class="yv" id="yieldFloat">20.0000</span>
+      </div>
+      <div class="yield-row">
+        <span class="yk">Yield rate</span>
+        <span class="yv">4.75% APY</span>
+      </div>
+      <div class="yield-row">
+        <span class="yk">Earned this session</span>
+        <span class="yv" id="yieldSession">$0.00000000</span>
+      </div>
+      <div class="yield-bar-wrap">
+        <div class="yield-bar" id="yieldBar"></div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+// ── State ───────────────────────────────────────────────────────────────────
+let totalCost   = 0;
+let totalYield  = 0;
+let totalTx     = 0;
+let sessionSid  = "";
+let running     = false;
+let planChips   = {};
+
+// ── Socket.IO ───────────────────────────────────────────────────────────────
+const socket = io();
+
+socket.on("connect", () => {
+  setLive(true);
+  sessionSid = socket.id;
+});
+
+socket.on("disconnect", () => setLive(false));
+
+socket.on("connected", d => {
+  const pill = document.getElementById("modePill");
+  pill.textContent = d.mode === "live" ? "LIVE MODE" : "DEMO MODE";
+  if (d.mode === "live") pill.style.cssText = "background:rgba(255,77,109,0.15);color:var(--red);border-color:var(--red)";
+  sessionSid = d.sid;
+});
+
+socket.on("status", d => {
+  setStatus(d.phase || "working", d.message || "");
+  if (d.plan) renderPlan(d.plan);
+});
+
+socket.on("agent_active", d => setAgentActive(d.agent, d.action));
+socket.on("agent_done",   d => setAgentIdle(d.agent));
+
+socket.on("transaction", d => {
+  totalCost += d.amount;
+  totalTx    = d.total_tx;
+  addTx(d);
+  updateMetrics();
+});
+
+socket.on("yield_update", d => {
+  totalYield = d.total_yield || 0;
+  updateMetrics();
+  // Update per-agent cards
+  if (d.agents) {
+    for (const [aid, snap] of Object.entries(d.agents)) {
+      const usycEl  = document.getElementById(`usyc-${aid}`);
+      const yieldEl = document.getElementById(`yield-${aid}`);
+      if (usycEl)  usycEl.textContent  = snap.usyc_balance.toFixed(4);
+      if (yieldEl) yieldEl.textContent = (snap.yield_earned * 1000).toFixed(4) + "m";
+    }
+    // Update yield panel
+    const total = Object.values(d.agents).reduce((s,a) => s + a.usyc_balance, 0);
+    document.getElementById("yieldFloat").textContent = total.toFixed(4);
+    document.getElementById("yieldSession").textContent = "$" + totalYield.toFixed(8);
+    // Progress bar: yield as fraction of cost (how much it subsidises)
+    const pct = totalCost > 0 ? Math.min((totalYield / totalCost) * 100, 100) : 0;
+    document.getElementById("yieldBar").style.width = pct + "%";
+  }
+});
+
+socket.on("task_complete", d => {
+  running = false;
+  document.getElementById("runBtn").disabled = false;
+  document.getElementById("taskInput").disabled = false;
+  setStatus("complete", `Done. ${d.tx_count} transactions. Total cost: $${d.total_cost.toFixed(6)}`);
+  if (d.report) renderReport(d.report);
+  markAllChipsDone();
+  document.getElementById("marginNote").classList.add("visible");
+});
+
+socket.on("task_error", d => {
+  running = false;
+  document.getElementById("runBtn").disabled = false;
+  document.getElementById("taskInput").disabled = false;
+  setStatus("error", "Error: " + d.error);
+});
+
+// ── Actions ─────────────────────────────────────────────────────────────────
+async function runTask() {
+  const task = document.getElementById("taskInput").value.trim();
+  if (!task || running) return;
+
+  running = true;
+  totalCost = 0;
+  totalTx   = 0;
+  document.getElementById("runBtn").disabled   = true;
+  document.getElementById("taskInput").disabled = true;
+  document.getElementById("reportEmpty").style.display    = "none";
+  document.getElementById("reportContent").classList.add("visible");
+  document.getElementById("reportBody").textContent = "";
+  document.getElementById("reportTitle").textContent = "";
+  document.getElementById("marginNote").classList.remove("visible");
+  document.getElementById("planSteps").innerHTML = "";
+  planChips = {};
+  resetAllAgents();
+
+  setStatus("starting", "Connecting to agent pool...");
+
+  try {
+    const res = await fetch("/api/run", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({task, sid: sessionSid}),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+  } catch (e) {
+    setStatus("error", e.message);
+    running = false;
+    document.getElementById("runBtn").disabled   = false;
+    document.getElementById("taskInput").disabled = false;
+  }
+}
+
+// ── UI helpers ───────────────────────────────────────────────────────────────
+function setLive(on) {
+  document.getElementById("liveDot").style.background = on ? "var(--green)" : "var(--text-faint)";
+}
+
+function setStatus(phase, msg) {
+  document.getElementById("phaseLabel").textContent = phase.toUpperCase();
+  document.getElementById("statusMsg").textContent  = msg;
+}
+
+function updateMetrics() {
+  const net = totalCost - totalYield;
+  document.getElementById("metricCost").textContent  = "$" + totalCost.toFixed(6);
+  document.getElementById("metricYield").textContent = "$" + totalYield.toFixed(8);
+  document.getElementById("metricTx").textContent    = totalTx;
+  document.getElementById("metricNet").textContent   = "$" + Math.max(net, 0).toFixed(6);
+  document.getElementById("headerCost").textContent  = "$" + totalCost.toFixed(6);
+  document.getElementById("headerYield").textContent = "$" + totalYield.toFixed(8);
+  document.getElementById("headerTxCount").textContent = totalTx;
+}
+
+function addTx(d) {
+  const feed = document.getElementById("txFeed");
+  // Remove placeholder
+  const placeholder = feed.querySelector("div");
+  if (placeholder && placeholder.style.textAlign === "center") feed.removeChild(placeholder);
+
+  const item = document.createElement("div");
+  item.className = "tx-item";
+  const shortHash = d.tx_hash ? d.tx_hash.slice(0, 10) + "..." + d.tx_hash.slice(-6) : "0x...";
+  item.innerHTML = `
+    <div class="tx-top">
+      <span class="tx-agent ${d.agent}">${d.agent || "agent"}</span>
+      <span class="tx-amount">+$${d.amount.toFixed(4)}</span>
+    </div>
+    <div class="tx-action">${d.action || ""}</div>
+    <div class="tx-hash"><span class="tx-check">✓</span> ${shortHash} · Arc</div>
+  `;
+  feed.insertBefore(item, feed.firstChild);
+
+  // Mark chip done
+  if (planChips[d.action + d.agent]) {
+    planChips[d.action + d.agent].classList.add("done");
+  }
+}
+
+function renderPlan(plan) {
+  const wrap = document.getElementById("planSteps");
+  wrap.innerHTML = "";
+  planChips = {};
+  plan.forEach(step => {
+    const chip = document.createElement("div");
+    chip.className = "plan-chip";
+    chip.textContent = `${step.agent[0].toUpperCase()}: ${step.action}`;
+    wrap.appendChild(chip);
+    planChips[step.action + step.agent] = chip;
+  });
+}
+
+function markAllChipsDone() {
+  document.querySelectorAll(".plan-chip").forEach(c => c.classList.add("done"));
+}
+
+function renderReport(text) {
+  const task = document.getElementById("taskInput").value.trim();
+  document.getElementById("reportTitle").textContent = "// PIPELINE OUTPUT: " + task.toUpperCase().slice(0, 60);
+  document.getElementById("reportBody").textContent = text;
+}
+
+function setAgentActive(agentId, action) {
+  const card = document.getElementById("card-" + agentId);
+  const act  = document.getElementById("action-" + agentId);
+  if (card) { card.classList.remove("idle"); card.classList.add("active"); }
+  if (act)  act.textContent = action.replace(/_/g, " ");
+}
+
+function setAgentIdle(agentId) {
+  const card = document.getElementById("card-" + agentId);
+  const act  = document.getElementById("action-" + agentId);
+  if (card) { card.classList.remove("active"); card.classList.add("idle"); }
+  if (act)  act.textContent = "Idle — earning yield";
+}
+
+function resetAllAgents() {
+  ["orchestrator","researcher","analyst","writer"].forEach(id => {
+    const card = document.getElementById("card-" + id);
+    const act  = document.getElementById("action-" + id);
+    if (card) { card.classList.remove("active","idle"); }
+    if (act)  act.textContent = id === "orchestrator" ? "Planning..." : "Standby";
+  });
+  document.getElementById("txFeed").innerHTML =
+    '<div style="padding:20px;color:var(--text-faint);font-size:11px;text-align:center;">Waiting for pipeline to start...</div>';
+}
+
+// Enter key
+document.getElementById("taskInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") runTask();
+});
+</script>
+</body>
+</html>
