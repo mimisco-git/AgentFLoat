@@ -17,6 +17,8 @@ from payments.x402 import x402_required
 from payments.erc8004 import registry
 from payments.spending_guard import guard, default_policy
 from payments.gateway_client import get_gateway_balance, gateway_pool_summary
+from payments.cctp_client import initiate_transfer, get_attestation, CCTP_DOMAINS, rebalance_to_arc
+from payments.bridge_kit import bridge_usdc, fund_agent_on_arc, multichain_balance, estimate_route
 from agents.orchestrator import Orchestrator
 from agents.specialists import build_specialist
 
@@ -137,6 +139,73 @@ def spending():
 def gateway():
     addresses = [a["wallet"]["address"] for a in AGENTS.values()]
     return jsonify(gateway_pool_summary(addresses))
+
+
+@app.route("/api/cctp/estimate", methods=["POST"])
+def cctp_estimate():
+    """Estimate cross-chain transfer route and fees."""
+    body = request.get_json(silent=True) or {}
+    return jsonify(estimate_route(
+        from_chain=body.get("from_chain", "ethereum"),
+        to_chain=body.get("to_chain", "arc"),
+        amount_usdc=float(body.get("amount", 1.0)),
+    ))
+
+
+@app.route("/api/cctp/transfer", methods=["POST"])
+def cctp_transfer():
+    """Initiate a CCTP cross-chain USDC transfer."""
+    body = request.get_json(silent=True) or {}
+    result = initiate_transfer(
+        from_chain=body.get("from_chain", "ethereum"),
+        to_chain=body.get("to_chain", "arc"),
+        amount_usdc=float(body.get("amount", 1.0)),
+        recipient=body.get("recipient", ""),
+        wallet_id=body.get("wallet_id", ""),
+    )
+    return jsonify(result)
+
+
+@app.route("/api/cctp/chains")
+def cctp_chains():
+    """List all CCTP-supported chains."""
+    return jsonify({
+        "chains":   list(CCTP_DOMAINS.keys()),
+        "domains":  CCTP_DOMAINS,
+        "protocol": "Circle CCTP v2",
+        "note":     "Native USDC burn+mint. No wrapped tokens.",
+    })
+
+
+@app.route("/api/bridge/estimate", methods=["POST"])
+def bridge_estimate():
+    """Estimate Bridge Kit route (CCTP vs Gateway)."""
+    body = request.get_json(silent=True) or {}
+    return jsonify(estimate_route(
+        from_chain=body.get("from_chain", "ethereum"),
+        to_chain=body.get("to_chain", "arc"),
+        amount_usdc=float(body.get("amount", 1.0)),
+    ))
+
+
+@app.route("/api/bridge/transfer", methods=["POST"])
+def bridge_transfer():
+    """Bridge USDC via optimal route (Bridge Kit)."""
+    body = request.get_json(silent=True) or {}
+    result = bridge_usdc(
+        from_chain=body.get("from_chain", "ethereum"),
+        to_chain=body.get("to_chain", "arc"),
+        amount_usdc=float(body.get("amount", 1.0)),
+        recipient=body.get("recipient", ""),
+        wallet_id=body.get("wallet_id", ""),
+    )
+    return jsonify(result)
+
+
+@app.route("/api/bridge/multichain/<address>")
+def bridge_multichain(address):
+    """Get multichain USDC balance for an address."""
+    return jsonify(multichain_balance(address))
 
 
 @app.route("/api/prices")

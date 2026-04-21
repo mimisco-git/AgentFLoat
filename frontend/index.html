@@ -75,14 +75,14 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 18px;
 .mst .mv{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--green-d)}
 .trust-bar{height:2px;background:var(--border);border-radius:1px;margin-top:4px;overflow:hidden}
 .trust-fill{height:100%;background:linear-gradient(90deg,var(--green),#00e5a0);border-radius:1px;transition:width 1s ease}
-.why{margin-top:auto;padding:11px 13px;border-top:1px solid var(--border);background:linear-gradient(135deg,var(--navy),var(--navy2))}
-.why .wt{font-family:var(--orb);font-size:7px;font-weight:700;color:rgba(255,255,255,.4);margin-bottom:7px;text-transform:uppercase;letter-spacing:.1em}
+.why{margin-top:auto;padding:11px 13px;border-top:1px solid var(--border);background:var(--bg3)}
+.why .wt{font-family:var(--orb);font-size:7px;font-weight:700;color:var(--text3);margin-bottom:7px;text-transform:uppercase;letter-spacing:.1em}
 .wr{display:flex;justify-content:space-between;margin-bottom:3px}
-.wk{font-size:9px;color:rgba(255,255,255,.4)}.wv{font-family:var(--mono);font-size:9px;font-weight:600}
-.wv.r{color:#f87171}.wv.g{color:var(--green)}
-.eth-savings{margin-top:7px;padding:5px 7px;background:rgba(0,194,124,.12);border-radius:4px;border:1px solid rgba(0,194,124,.2)}
-.eth-savings .sk{font-size:8px;color:rgba(255,255,255,.5);margin-bottom:1px}
-.eth-savings .sv{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green)}
+.wk{font-size:9px;color:var(--text2)}.wv{font-family:var(--mono);font-size:9px;font-weight:600}
+.wv.r{color:var(--red)}.wv.g{color:var(--green-d)}
+.eth-savings{margin-top:7px;padding:5px 7px;background:var(--green-l);border-radius:4px;border:1px solid rgba(0,194,124,.2)}
+.eth-savings .sk{font-size:8px;color:var(--green-d);margin-bottom:1px}
+.eth-savings .sv{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green-d)}
 
 /* ── MAIN ────────────────────────────────────────────────────────────────────── */
 .main{display:flex;flex-direction:column;overflow:hidden}
@@ -268,15 +268,15 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 18px;
 
   /* Why Arc box in mobile */
   .mob-why{
-    background:var(--navy);border-radius:8px;padding:12px;margin-bottom:8px;color:white;
+    background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;
   }
-  .mob-why .wt{font-family:var(--orb);font-size:8px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .mob-why .wt{font-family:var(--orb);font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
   .mob-why .wr{display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px}
-  .mob-why .wk{color:rgba(255,255,255,.4)}.mob-why .wvr{color:#f87171;font-family:var(--mono);font-weight:600}
-  .mob-why .wvg{color:var(--green);font-family:var(--mono);font-weight:600}
-  .mob-eth{margin-top:8px;padding:7px 9px;background:rgba(0,194,124,.15);border-radius:5px}
-  .mob-eth .sk{font-size:8px;color:rgba(255,255,255,.5);margin-bottom:2px}
-  .mob-eth .sv{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green)}
+  .mob-why .wk{color:var(--text2)}.mob-why .wvr{color:var(--red);font-family:var(--mono);font-weight:600}
+  .mob-why .wvg{color:var(--green-d);font-family:var(--mono);font-weight:600}
+  .mob-eth{margin-top:8px;padding:7px 9px;background:var(--green-l);border-radius:5px;border:1px solid rgba(0,194,124,.2)}
+  .mob-eth .sk{font-size:8px;color:var(--green-d);margin-bottom:2px}
+  .mob-eth .sv{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green-d)}
 
   /* TX panel mobile */
   .mob-tx-wrap{background:white;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
@@ -368,12 +368,12 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 18px;
     <div class="wr"><span class="wk">Difference</span><span class="wv g">20,000x cheaper</span></div>
     <div class="eth-savings"><div class="sk">Saved vs Ethereum</div><div class="sv" id="ethSavings">$0.00</div></div>
   </div>
-  <div style="padding:10px 13px;border-top:1px solid rgba(255,255,255,.08);background:rgba(10,22,40,.95)">
-    <div class="wt" style="margin-bottom:6px">SpendingGuard</div>
+  <div style="padding:10px 13px;border-top:1px solid var(--border);background:var(--bg3)">
+    <div style="font-family:var(--orb);font-size:7px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.1em">SpendingGuard</div>
     <div class="wr"><span class="wk">Per-action cap</span><span class="wv g">$0.005</span></div>
     <div class="wr"><span class="wk">Daily limit</span><span class="wv g">$2.00</span></div>
     <div class="wr"><span class="wk">Pipeline limit</span><span class="wv g">$0.50</span></div>
-    <div class="wr"><span class="wk">Blocked txns</span><span class="wv" style="color:#f87171" id="guardBlocked">0</span></div>
+    <div class="wr"><span class="wk">Blocked txns</span><span class="wv r" id="guardBlocked">0</span></div>
   </div>
 </aside>
 
@@ -506,13 +506,20 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 18px;
       </div>
     </div>
     <div class="tab-panel" id="tab-txns">
-      <div class="mob-tx-wrap"><div class="txf" id="mob-txf" style="max-height:340px"><div class="txe">Transactions stream here as agents work.</div></div></div>
+      <div class="mob-tx-wrap"><div class="txf" id="mob-txf" style="max-height:280px"><div class="txe">Transactions stream here as agents work.</div></div></div>
       <div class="mob-ypan" style="margin-top:8px">
         <div class="yt">USYC Treasury Pool</div>
         <div class="yr"><span class="yk">Total USYC float</span><span class="yv" id="mob-yF">20.0000</span></div>
         <div class="yr"><span class="yk">APY rate</span><span class="yv">4.75%</span></div>
         <div class="yr"><span class="yk">Earned this session</span><span class="yv" id="mob-yS">$0.00000000</span></div>
         <div class="ybg"><div class="yfill" id="mob-yB"></div></div>
+      </div>
+      <div style="margin-top:8px;background:var(--blue-l);border:1px solid rgba(37,99,235,.15);border-radius:8px;padding:12px">
+        <div style="font-family:var(--orb);font-size:8px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">CCTP + Bridge Kit</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:10px"><span style="color:var(--text2)">Protocol</span><span style="color:var(--blue);font-family:var(--mono);font-weight:600">Circle CCTP v2</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:10px"><span style="color:var(--text2)">Chains</span><span style="color:var(--blue);font-family:var(--mono);font-weight:600">10 supported</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:10px"><span style="color:var(--text2)">Route</span><span style="color:var(--green-d);font-family:var(--mono);font-weight:600">CCTP + Gateway</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:var(--text2)">Wrapped tokens</span><span style="color:var(--green-d);font-family:var(--mono);font-weight:600">Never</span></div>
       </div>
     </div>
   </div>
@@ -535,6 +542,13 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 18px;
     <div class="yr"><span class="yk">Gas-free txns</span><span class="yv" id="gwTxns">0</span></div>
     <div class="yr"><span class="yk">Settlement</span><span class="yv" style="color:var(--blue)">Batched</span></div>
   </div>
+  <div class="ypan" style="border-top:1px solid var(--border)">
+    <div class="yt">CCTP + Bridge Kit</div>
+    <div class="yr"><span class="yk">Supported chains</span><span class="yv" style="color:var(--purple)">10</span></div>
+    <div class="yr"><span class="yk">Protocol</span><span class="yv" style="color:var(--purple)">CCTP v2</span></div>
+    <div class="yr"><span class="yk">Wrapped tokens?</span><span class="yv" style="color:var(--green-d)">Never</span></div>
+    <div class="yr"><span class="yk">Bridge risk</span><span class="yv" style="color:var(--green-d)">None</span></div>
+  </div>
 </aside>
 
 <!-- FOOTER -->
@@ -549,7 +563,11 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 18px;
   <div class="tp-sep"></div>
   <div class="tech-pill"><div class="tech-dot" style="background:#0A1628"></div>ERC-8004 Trust</div>
   <div class="tp-sep"></div>
-  <div class="tech-pill"><div class="tech-dot" style="background:#EF4444"></div>USDC Settlement</div>
+  <div class="tech-pill"><div class="tech-dot" style="background:#2563EB"></div>Circle Gateway</div>
+  <div class="tp-sep"></div>
+  <div class="tech-pill"><div class="tech-dot" style="background:#7C3AED"></div>CCTP v2</div>
+  <div class="tp-sep"></div>
+  <div class="tech-pill"><div class="tech-dot" style="background:#EF4444"></div>Bridge Kit</div>
 </footer>
 </div>
 
