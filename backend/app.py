@@ -208,9 +208,18 @@ def bridge_multichain(address):
     return jsonify(multichain_balance(address))
 
 
-@app.route("/api/prices")
-def prices():
-    return jsonify(PRICES)
+@app.route("/api/mode")
+def mode():
+    """Quick mode check — used by frontend to update badges on load."""
+    from config import USE_GROQ, GROQ_API_KEY, ANTHROPIC_API_KEY
+    ai_model = "groq-llama-3" if USE_GROQ else ("anthropic-claude" if ANTHROPIC_API_KEY else "none")
+    return jsonify({
+        "mode":     "demo" if DEMO_MODE else "live",
+        "ai_model": ai_model,
+        "ai_label": "Groq Llama 3" if USE_GROQ else ("Claude Sonnet" if ANTHROPIC_API_KEY else "Demo"),
+        "circle":   bool(CIRCLE_API_KEY),
+        "groq":     bool(GROQ_API_KEY),
+    })
 
 
 # x402-protected endpoints
@@ -272,7 +281,13 @@ def run_task():
 
 @socketio.on("connect")
 def on_connect():
-    emit("connected", {"sid": request.sid, "mode": "demo" if DEMO_MODE else "live"})
+    from config import USE_GROQ, GROQ_API_KEY, ANTHROPIC_API_KEY
+    ai_label = "Groq Llama 3" if USE_GROQ else ("Claude Sonnet" if ANTHROPIC_API_KEY else "Demo")
+    emit("connected", {
+        "sid":      request.sid,
+        "mode":     "demo" if DEMO_MODE else "live",
+        "ai_label": ai_label,
+    })
 
 
 if __name__ == "__main__":
