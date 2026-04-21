@@ -1,7 +1,6 @@
 """
-app.py — AgentFloat main server
-Arc + Circle Nanopayments + x402 + ERC-8004 + USYC + AIsa
-Railway-compatible: reads PORT from environment
+app.py — AgentFloat
+Arc + Circle Nanopayments + Gateway + x402 + ERC-8004 + USYC + SpendingGuard + AIsa
 """
 
 import os
@@ -16,20 +15,18 @@ from payments.circle_client import create_wallet
 from payments.usyc_treasury import AgentTreasury, TreasuryPool
 from payments.x402 import x402_required
 from payments.erc8004 import registry
+from payments.spending_guard import guard, default_policy
+from payments.gateway_client import get_gateway_balance, gateway_pool_summary
 from agents.orchestrator import Orchestrator
 from agents.specialists import build_specialist
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 app.config["SECRET_KEY"] = "agentfloat-arc-2026"
-
-# Allow Vercel frontend, Railway, and local dev
 CORS(app, resources={r"/*": {"origins": "*"}})
 socketio = SocketIO(
-    app,
-    cors_allowed_origins="*",
+    app, cors_allowed_origins="*",
     async_mode="threading",
-    logger=False,
-    engineio_logger=False,
+    logger=False, engineio_logger=False,
 )
 
 AGENTS        = {}
@@ -49,13 +46,18 @@ def init_agent_pool():
         treasury = AgentTreasury(wallet_id=wallet["wallet_id"], initial_usyc=5.0)
         TREASURY_POOL.add(aid, treasury)
         AGENTS[aid] = {"wallet": wallet, "treasury": treasury}
+
+        # Register ERC-8004 identity
         registry.register(
-            agent_id=aid,
-            display_name=label,
-            role=aid,
-            wallet_address=wallet["address"],
+            agent_id=aid, display_name=label,
+            role=aid, wallet_address=wallet["address"],
         )
+        # Register spending policy
+        guard.set_policy(default_policy(aid))
+
     print(f"[AgentFloat] Pool ready. DEMO_MODE={DEMO_MODE}")
+    for aid, a in AGENTS.items():
+        print(f"  {aid}: {a['wallet']['wallet_id']}")
 
 
 def yield_ticker():
@@ -71,7 +73,7 @@ def yield_ticker():
             pass
 
 
-# ── Routes ────────────────────────────────────────────────────────────────────
+# ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.route("/")
 def index():
@@ -80,19 +82,24 @@ def index():
 
 @app.route("/api/status")
 def status():
+    addresses = [a["wallet"]["address"] for a in AGENTS.values()]
+    gw_pool   = gateway_pool_summary(addresses)
     return jsonify({
         "mode":    "demo" if DEMO_MODE else "live",
         "agents":  [
             {
-                "id":       aid,
-                "wallet":   a["wallet"]["wallet_id"],
-                "address":  a["wallet"]["address"],
-                "treasury": a["treasury"].snapshot(),
-                "erc8004":  registry.get(aid).to_dict() if registry.get(aid) else {},
+                "id":            aid,
+                "wallet":        a["wallet"]["wallet_id"],
+                "address":       a["wallet"]["address"],
+                "treasury":      a["treasury"].snapshot(),
+                "erc8004":       registry.get(aid).to_dict() if registry.get(aid) else {},
+                "spending":      guard.snapshot().get(aid, {}),
+                "gateway_bal":   get_gateway_balance(a["wallet"]["address"]),
             }
             for aid, a in AGENTS.items()
         ],
-        "prices":  PRICES,
+        "prices":      PRICES,
+        "gateway_pool": gw_pool,
         "yield": {
             "total_earned": round(TREASURY_POOL.total_yield(), 8),
             "total_paid":   round(TREASURY_POOL.total_paid(), 6),
@@ -101,7 +108,7 @@ def status():
 
 
 @app.route("/api/trust")
-def trust_leaderboard():
+def trust():
     return jsonify({
         "leaderboard": registry.leaderboard(),
         "standard":    "ERC-8004",
@@ -109,12 +116,35 @@ def trust_leaderboard():
     })
 
 
+@app.route("/api/spending")
+def spending():
+    return jsonify({
+        "guard_snapshot": guard.snapshot(),
+        "policies": {
+            aid: {
+                "max_per_action":   p.max_per_action,
+                "max_per_day":      p.max_per_day,
+                "max_per_pipeline": p.max_per_pipeline,
+                "allowed_actions":  p.allowed_actions,
+                "enabled":          p.enabled,
+            }
+            for aid, p in guard._policies.items()
+        },
+    })
+
+
+@app.route("/api/gateway")
+def gateway():
+    addresses = [a["wallet"]["address"] for a in AGENTS.values()]
+    return jsonify(gateway_pool_summary(addresses))
+
+
 @app.route("/api/prices")
 def prices():
     return jsonify(PRICES)
 
 
-# x402-protected agent endpoints
+# x402-protected endpoints
 @app.route("/api/agent/web_search", methods=["GET", "POST"])
 @x402_required("web_search", "0xAgentFloatTreasury")
 def agent_web_search():
@@ -171,7 +201,6 @@ def run_task():
     return jsonify({"message": "Pipeline started", "mode": "demo" if DEMO_MODE else "live"})
 
 
-# Sockets
 @socketio.on("connect")
 def on_connect():
     emit("connected", {"sid": request.sid, "mode": "demo" if DEMO_MODE else "live"})

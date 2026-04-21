@@ -173,6 +173,8 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 18px;
 .txck{color:var(--green);margin-right:1px}
 .x402-badge{font-family:var(--mono);font-size:6px;font-weight:600;padding:1px 4px;border-radius:2px;background:var(--purple-l);color:var(--purple);flex-shrink:0}
 .erc-badge{font-family:var(--mono);font-size:6px;font-weight:600;padding:1px 4px;border-radius:2px;background:var(--blue-l);color:var(--blue);flex-shrink:0}
+.gw-badge{font-family:var(--mono);font-size:6px;font-weight:600;padding:1px 4px;border-radius:2px;background:var(--green-l);color:var(--green-d);flex-shrink:0}
+.guard-badge{font-family:var(--mono);font-size:6px;font-weight:600;padding:1px 4px;border-radius:2px;background:var(--amber-l);color:var(--amber);flex-shrink:0}
 .ypan{padding:11px 13px;border-top:1px solid var(--border);background:linear-gradient(135deg,rgba(0,194,124,.06),rgba(37,99,235,.04))}
 .yt{font-family:var(--orb);font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:7px}
 .yr{display:flex;justify-content:space-between;margin-bottom:4px}
@@ -366,6 +368,13 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 18px;
     <div class="wr"><span class="wk">Difference</span><span class="wv g">20,000x cheaper</span></div>
     <div class="eth-savings"><div class="sk">Saved vs Ethereum</div><div class="sv" id="ethSavings">$0.00</div></div>
   </div>
+  <div style="padding:10px 13px;border-top:1px solid rgba(255,255,255,.08);background:rgba(10,22,40,.95)">
+    <div class="wt" style="margin-bottom:6px">SpendingGuard</div>
+    <div class="wr"><span class="wk">Per-action cap</span><span class="wv g">$0.005</span></div>
+    <div class="wr"><span class="wk">Daily limit</span><span class="wv g">$2.00</span></div>
+    <div class="wr"><span class="wk">Pipeline limit</span><span class="wv g">$0.50</span></div>
+    <div class="wr"><span class="wk">Blocked txns</span><span class="wv" style="color:#f87171" id="guardBlocked">0</span></div>
+  </div>
 </aside>
 
 <!-- MAIN PANEL -->
@@ -519,6 +528,12 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 18px;
     <div class="yr"><span class="yk">APY rate</span><span class="yv">4.75%</span></div>
     <div class="yr"><span class="yk">Earned this session</span><span class="yv" id="yS">$0.00000000</span></div>
     <div class="ybg"><div class="yfill" id="yB"></div></div>
+  </div>
+  <div class="ypan" style="border-top:1px solid var(--border)">
+    <div class="yt">Circle Gateway Pool</div>
+    <div class="yr"><span class="yk">Gateway USDC</span><span class="yv" id="gwTotal">~$20.00</span></div>
+    <div class="yr"><span class="yk">Gas-free txns</span><span class="yv" id="gwTxns">0</span></div>
+    <div class="yr"><span class="yk">Settlement</span><span class="yv" style="color:var(--blue)">Batched</span></div>
   </div>
 </aside>
 
@@ -701,6 +716,11 @@ function initSocket(){
     document.getElementById('sph').className='sph done';
     if(d.report){setEl('rtit',document.getElementById('taskIn').value.trim().slice(0,72));setEl('rbody',d.report)}
     if(d.erc8004)d.erc8004.forEach(a=>{if(a.agent_id)updateTrust(a.agent_id,a.tasks_completed)});
+    if(d.gateway_pool){setEl('gwTotal','$'+d.gateway_pool.total_usdc.toFixed(2));setEl('gwTxns',txCount);}
+    if(d.spending_guard){
+      const blocked=Object.values(d.spending_guard).reduce((s,a)=>s+(a.blocked_count||0),0);
+      setEl('guardBlocked',blocked);
+    }
     showRunStats();markAllDone();
     document.getElementById('mn').classList.add('vis');
     setEl('mnEth','$'+(txCount*ETH_GAS).toFixed(2));
@@ -815,7 +835,9 @@ function updateMetrics(){
 
 function addTx(d){
   const h=d.tx_hash.slice(0,10)+'...'+d.tx_hash.slice(-6);
-  const html=`<div class="txi"><div class="txtp"><span class="txb ${d.agent}">${d.agent}</span><span class="txa">+$${d.amount.toFixed(4)}</span></div><div class="txac">${(d.action||'').replace(/_/g,' ')}</div><div class="txmeta"><span class="txck">✓</span><span class="txh">${h}·Arc</span><span class="x402-badge">x402</span><span class="erc-badge">ERC-8004</span></div></div>`;
+  const flagged = d.flagged ? '<span class="guard-badge">GUARD</span>' : '';
+  const gwbal = d.gateway_balance ? `<span class="gw-badge">GW:$${Number(d.gateway_balance).toFixed(2)}</span>` : '';
+  const html=`<div class="txi"><div class="txtp"><span class="txb ${d.agent}">${d.agent}</span><span class="txa">+$${d.amount.toFixed(4)}</span></div><div class="txac">${(d.action||'').replace(/_/g,' ')}</div><div class="txmeta"><span class="txck">✓</span><span class="txh">${h}·Arc</span><span class="x402-badge">x402</span><span class="erc-badge">ERC-8004</span><span class="gw-badge">Gateway</span>${flagged}</div></div>`;
   const f=document.getElementById('txf');f.insertAdjacentHTML('afterbegin',html);
   const mf=document.getElementById('mob-txf');if(mf){const me=mf.querySelector('.txe');if(me)me.remove();mf.insertAdjacentHTML('afterbegin',html)}
 }
