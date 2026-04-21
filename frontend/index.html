@@ -693,10 +693,24 @@ function updateTrust(id,tasks){
 /* ── Live backend (Render) — connect immediately if URL is set ─────────────────── */
 let socket=null;
 if(USE_BACKEND){
-  // Set badge immediately — don't wait for socket
   document.getElementById('mBadge').textContent='Connecting...';
   document.getElementById('mBadge').style.cssText='background:#fffbeb;color:#b45309;border-color:rgba(245,158,11,.3)';
-  setTimeout(initSocket, 100);
+  // Fetch mode directly via REST — faster and more reliable than waiting for socket event
+  fetch(BACKEND_URL+'/api/mode',{mode:'cors'})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.mode==='live'){
+        document.getElementById('mBadge').textContent='Live Mode';
+        document.getElementById('mBadge').style.cssText='background:#fee2e2;color:#b91c1c;border-color:rgba(239,68,68,.3)';
+        document.getElementById('aiBadge').textContent='AI: '+(d.ai_label||'Groq Llama 3');
+      } else {
+        document.getElementById('mBadge').textContent='Demo Mode';
+        document.getElementById('mBadge').style.cssText='';
+        document.getElementById('aiBadge').textContent='AI: Demo';
+      }
+    })
+    .catch(()=>{/* Backend sleeping, socket will handle it */});
+  setTimeout(initSocket, 200);
 }
 
 function initSocket(){
@@ -704,8 +718,16 @@ function initSocket(){
   socket=io(BACKEND_URL,{transports:['websocket','polling'],timeout:20000,reconnection:true,reconnectionAttempts:5});
   socket.on('connect',()=>{
     document.getElementById('pDot').classList.add('live');
-    document.getElementById('mBadge').textContent='Live Mode';
-    document.getElementById('mBadge').style.cssText='background:#fee2e2;color:#b91c1c;border-color:rgba(239,68,68,.3)';
+    // Re-fetch mode after socket connects in case backend just woke up
+    fetch(BACKEND_URL+'/api/mode',{mode:'cors'})
+      .then(r=>r.json())
+      .then(d=>{
+        if(d.mode==='live'){
+          document.getElementById('mBadge').textContent='Live Mode';
+          document.getElementById('mBadge').style.cssText='background:#fee2e2;color:#b91c1c;border-color:rgba(239,68,68,.3)';
+          document.getElementById('aiBadge').textContent='AI: '+(d.ai_label||'Groq Llama 3');
+        }
+      }).catch(()=>{});
   });
   socket.on('connect_error',()=>{
     document.getElementById('mBadge').textContent='Demo Mode';
@@ -714,7 +736,9 @@ function initSocket(){
   socket.on('disconnect',()=>document.getElementById('pDot').classList.remove('live'));
   socket.on('connected',d=>{
     if(d.mode==='live'){
-      document.getElementById('aiBadge').textContent='AI: Groq Llama 3';
+      document.getElementById('mBadge').textContent='Live Mode';
+      document.getElementById('mBadge').style.cssText='background:#fee2e2;color:#b91c1c;border-color:rgba(239,68,68,.3)';
+      document.getElementById('aiBadge').textContent='AI: '+(d.ai_label||'Groq Llama 3');
     }
   });
   socket.on('status',d=>{setSt(d.phase||'working',d.message||'');if(d.plan)renderPlan(d.plan)});
